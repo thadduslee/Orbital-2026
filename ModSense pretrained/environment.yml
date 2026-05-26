@@ -1,0 +1,15 @@
+name: modsense
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+      - flask>=3.0
+      - tensorflow>=2.15
+      - pandas>=2.0
+      - numpy>=1.24
+      - requests>=2.31
+      - beautifulsoup4>=4.12
+      - python-dotenv>=1.0
+      - gunicorn>=21.0

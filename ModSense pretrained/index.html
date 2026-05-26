@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ModSense</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  /* ── Variables ─────────────────────────────────────── */
+  :root {
+    --bg:         #07080d;
+    --surface:    #0f1118;
+    --border:     #1e2230;
+    --border-hi:  #2e3450;
+    --orange:     #ff6c2f;
+    --orange-dim: #ff6c2f30;
+    --blue:       #4a7cff;
+    --blue-dim:   #4a7cff20;
+    --green:      #2ecc8a;
+    --green-dim:  #2ecc8a20;
+    --red:        #ff4560;
+    --red-dim:    #ff456020;
+    --text:       #e8eaf0;
+    --muted:      #5a6070;
+    --mono:       'IBM Plex Mono', monospace;
+    --serif:      'DM Serif Display', Georgia, serif;
+    --sans:       'DM Sans', sans-serif;
+  }
+
+  /* ── Reset ──────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-weight: 300;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Background grid ─────────────────────────────────── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 48px 48px;
+    opacity: 0.35;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Layout ──────────────────────────────────────────── */
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 60px 24px 100px;
+  }
+
+  /* ── Header ──────────────────────────────────────────── */
+  header {
+    margin-bottom: 56px;
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--orange);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .eyebrow::before {
+    content: '';
+    display: block;
+    width: 28px;
+    height: 1px;
+    background: var(--orange);
+  }
+  h1 {
+    font-family: var(--serif);
+    font-size: clamp(2.2rem, 6vw, 3.6rem);
+    font-weight: 400;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+  h1 em {
+    font-style: italic;
+    color: var(--orange);
+  }
+  .sub {
+    margin-top: 16px;
+    font-size: 15px;
+    color: var(--muted);
+    max-width: 500px;
+    line-height: 1.65;
+  }
+
+  /* ── Status bar ──────────────────────────────────────── */
+  #status-bar {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    padding: 12px 18px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    margin-bottom: 40px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: border-color 0.3s;
+  }
+  #status-bar.ready  { border-color: var(--green); color: var(--green); }
+  #status-bar.error  { border-color: var(--red);   color: var(--red);   }
+  #status-bar.loading { border-color: var(--orange); color: var(--orange); }
+
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+  .dot.pulse {
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  /* ── Search ──────────────────────────────────────────── */
+  .search-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 40px;
+  }
+  .search-row input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-family: var(--mono);
+    font-size: 15px;
+    color: var(--text);
+    letter-spacing: 0.06em;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .search-row input::placeholder { color: var(--muted); }
+  .search-row input:focus {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px var(--orange-dim);
+  }
+  .btn {
+    padding: 16px 28px;
+    border-radius: 8px;
+    border: none;
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .btn-primary {
+    background: var(--orange);
+    color: #fff;
+  }
+  .btn-primary:not(:disabled):hover { opacity: 0.88; }
+
+  /* ── Autocomplete list ───────────────────────────────── */
+  #autocomplete {
+    position: relative;
+    margin-top: -32px;
+    margin-bottom: 32px;
+  }
+  #ac-list {
+    background: var(--surface);
+    border: 1px solid var(--border-hi);
+    border-radius: 8px;
+    overflow: hidden;
+    display: none;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  .ac-item {
+    padding: 10px 20px;
+    font-family: var(--mono);
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--text);
+    transition: background 0.15s;
+  }
+  .ac-item:hover { background: var(--border); }
+
+  /* ── Result card ─────────────────────────────────────── */
+  #result {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.45s ease, transform 0.45s ease;
+  }
+  #result.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .card-header {
+    padding: 28px 32px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .module-code {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .module-title {
+    font-family: var(--serif);
+    font-size: 1.5rem;
+    font-weight: 400;
+    line-height: 1.2;
+    max-width: 440px;
+  }
+  .review-count {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    text-align: right;
+    white-space: nowrap;
+  }
+  .review-count span {
+    display: block;
+    font-size: 22px;
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* ── Score section ───────────────────────────────────── */
+  .score-section {
+    padding: 32px;
+    display: flex;
+    gap: 32px;
+    align-items: center;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--border);
+  }
+  .score-big {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 100px;
+  }
+  .score-num {
+    font-family: var(--serif);
+    font-size: 5rem;
+    line-height: 1;
+    font-weight: 400;
+  }
+  .score-denom {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .sentiment-badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 99px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-top: 10px;
+    font-weight: 500;
+  }
+  .sentiment-badge.positive { background: var(--green-dim);  color: var(--green); }
+  .sentiment-badge.neutral  { background: var(--blue-dim);   color: var(--blue); }
+  .sentiment-badge.negative { background: var(--red-dim);    color: var(--red); }
+
+  /* ── Score bar ───────────────────────────────────────── */
+  .score-bar-wrap { flex: 1; min-width: 180px; }
+  .score-bar-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 10px;
+    letter-spacing: 0.08em;
+  }
+  .score-track {
+    height: 6px;
+    background: var(--border);
+    border-radius: 99px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .score-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: var(--orange);
+    width: 0%;
+    transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .score-fill.positive { background: var(--green); }
+  .score-fill.neutral  { background: var(--blue); }
+  .score-fill.negative { background: var(--red); }
+  .score-ticks {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  /* ── Distribution ────────────────────────────────────── */
+  .dist-section {
+    padding: 28px 32px;
+  }
+  .dist-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+  .dist-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 12px;
+  }
+  .dist-name {
+    font-family: var(--mono);
+    font-size: 12px;
+    width: 60px;
+    flex-shrink: 0;
+  }
+  .dist-name.positive { color: var(--green); }
+  .dist-name.neutral  { color: var(--blue); }
+  .dist-name.negative { color: var(--red); }
+  .dist-track {
+    flex: 1;
+    height: 4px;
+    background: var(--border);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .dist-fill {
+    height: 100%;
+    border-radius: 99px;
+    width: 0%;
+    transition: width 1.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .dist-fill.positive { background: var(--green); }
+  .dist-fill.neutral  { background: var(--blue); }
+  .dist-fill.negative { background: var(--red); }
+  .dist-count {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    width: 32px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  /* ── Not found ───────────────────────────────────────── */
+  .not-found {
+    padding: 32px;
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+  .not-found .nf-title {
+    color: var(--red);
+    margin-bottom: 12px;
+  }
+  .not-found .nf-sug {
+    color: var(--muted);
+    margin-bottom: 10px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .sug-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+  .sug-pill {
+    padding: 5px 12px;
+    border: 1px solid var(--border-hi);
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .sug-pill:hover { border-color: var(--orange); color: var(--orange); }
+
+  /* ── Error state ─────────────────────────────────────── */
+  .error-card {
+    border-color: var(--red);
+    color: var(--red);
+    padding: 24px 32px;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  /* ── Footer ──────────────────────────────────────────── */
+  footer {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* ── Spinner ─────────────────────────────────────────── */
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid var(--border-hi);
+    border-top-color: var(--orange);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <header>
+    <div class="eyebrow">NUSMods · Disqus · Sentiment</div>
+    <h1>Mod<em>Sense</em></h1>
+    <p class="sub">Enter any NUS module code to see how students really feel — powered by a pretrained sentiment model.</p>
+  </header>
+
+  <!-- Status bar -->
+  <div id="status-bar" class="loading">
+    <div class="dot pulse"></div>
+    <span id="status-text">Initialising... loading model and fetching reviews.</span>
+  </div>
+
+  <!-- Search -->
+  <div class="search-row">
+    <input
+      id="mod-input"
+      type="text"
+      placeholder="e.g. CS1101S"
+      maxlength="10"
+      autocomplete="off"
+      spellcheck="false"
+      disabled
+    >
+    <button class="btn btn-primary" id="analyze-btn" disabled onclick="analyze()">Analyse</button>
+  </div>
+
+  <!-- Autocomplete -->
+  <div id="autocomplete">
+    <div id="ac-list"></div>
+  </div>
+
+  <!-- Result area -->
+  <div id="result"></div>
+
+  <!-- Footer -->
+  <footer>
+    <span>ModSense</span>
+    <span>Data from Disqus · Pretrained model</span>
+  </footer>
+
+</div>
+
+<script>
+/* ── State ───────────────────────────────────────────────── */
+let allModules = [];
+let statusInterval = null;
+
+/* ── Poll /api/status until ready ───────────────────────── */
+function pollStatus() {
+  statusInterval = setInterval(async () => {
+    try {
+      const r = await fetch('/api/status');
+      const d = await r.json();
+      updateStatusBar(d);
+      if (d.ready || d.error) {
+        clearInterval(statusInterval);
+        if (d.ready) {
+          await loadModules();
+          enableSearch();
+        }
+      }
+    } catch (e) {
+      updateStatusBar({ error: 'Server unreachable.' });
+    }
+  }, 2500);
+}
+
+function updateStatusBar(d) {
+  const bar  = document.getElementById('status-bar');
+  const txt  = document.getElementById('status-text');
+  const dot  = bar.querySelector('.dot');
+  bar.className = '';
+  dot.className = 'dot';
+  if (d.error) {
+    bar.classList.add('error');
+    txt.textContent = '✗ ' + d.error;
+  } else if (d.ready) {
+    bar.classList.add('ready');
+    txt.textContent = '✓ ' + d.progress;
+  } else {
+    bar.classList.add('loading');
+    dot.classList.add('pulse');
+    txt.textContent = d.progress || 'Loading…';
+  }
+}
+
+async function loadModules() {
+  const r = await fetch('/api/modules');
+  const d = await r.json();
+  if (d.modules) allModules = d.modules;
+}
+
+function enableSearch() {
+  document.getElementById('mod-input').disabled  = false;
+  document.getElementById('analyze-btn').disabled = false;
+  document.getElementById('mod-input').focus();
+}
+
+/* ── Autocomplete ────────────────────────────────────────── */
+const input  = document.getElementById('mod-input');
+const acList = document.getElementById('ac-list');
+
+input.addEventListener('input', () => {
+  const q = input.value.toUpperCase().trim();
+  if (!q || allModules.length === 0) { acList.style.display = 'none'; return; }
+  const hits = allModules.filter(m => m.startsWith(q)).slice(0, 8);
+  if (!hits.length) { acList.style.display = 'none'; return; }
+  acList.innerHTML = hits.map(m =>
+    `<div class="ac-item" onclick="pick('${m}')">${m}</div>`
+  ).join('');
+  acList.style.display = 'block';
+});
+
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { acList.style.display = 'none'; analyze(); }
+  if (e.key === 'Escape') acList.style.display = 'none';
+});
+
+document.addEventListener('click', e => {
+  if (!document.getElementById('autocomplete').contains(e.target) &&
+      e.target !== input) acList.style.display = 'none';
+});
+
+function pick(code) {
+  input.value = code;
+  acList.style.display = 'none';
+  analyze();
+}
+
+/* ── Analysis ────────────────────────────────────────────── */
+async function analyze() {
+  const code = input.value.toUpperCase().trim();
+  if (!code) return;
+  acList.style.display = 'none';
+
+  const btn = document.getElementById('analyze-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+
+  const resultEl = document.getElementById('result');
+  resultEl.classList.remove('visible');
+  resultEl.innerHTML = '';
+
+  try {
+    const r = await fetch(`/api/analyze/${encodeURIComponent(code)}`);
+    const d = await r.json();
+    renderResult(d, r.ok);
+  } catch (e) {
+    renderError('Network error: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Analyse';
+  }
+}
+
+/* ── Render results ──────────────────────────────────────── */
+function renderResult(d, ok) {
+  const el = document.getElementById('result');
+
+  if (!ok || !d.found) {
+    const sugs = (d.suggestions || []).map(m =>
+      `<span class="sug-pill" onclick="pick('${m}')">${m}</span>`
+    ).join('');
+    el.innerHTML = `<div class="card">
+      <div class="not-found">
+        <div class="nf-title">No reviews found for "${d.module_code}".</div>
+        ${sugs ? `<div class="nf-sug">Similar modules</div><div class="sug-pills">${sugs}</div>` : ''}
+      </div>
+    </div>`;
+    el.classList.add('visible');
+    return;
+  }
+
+  const pct   = (d.score / 5) * 100;
+  const total = d.review_count;
+  const dist  = d.score_distribution;
+  const posP  = total ? (dist.positive / total * 100).toFixed(0) : 0;
+  const neuP  = total ? (dist.neutral  / total * 100).toFixed(0) : 0;
+  const negP  = total ? (dist.negative / total * 100).toFixed(0) : 0;
+
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="module-code">${d.module_code}</div>
+          <div class="module-title">${escHtml(d.module_title)}</div>
+        </div>
+        <div class="review-count">
+          <span>${total}</span>reviews analysed
+        </div>
+      </div>
+
+      <div class="score-section">
+        <div class="score-big">
+          <div class="score-num" style="color: var(--${d.sentiment === 'positive' ? 'green' : d.sentiment === 'negative' ? 'red' : 'blue'})">${d.score}</div>
+          <div class="score-denom">out of 5.00</div>
+          <span class="sentiment-badge ${d.sentiment}">${d.sentiment}</span>
+        </div>
+
+        <div class="score-bar-wrap">
+          <div class="score-bar-label">SENTIMENT SCORE</div>
+          <div class="score-track">
+            <div class="score-fill ${d.sentiment}" id="sf" style="width:0%"></div>
+          </div>
+          <div class="score-ticks">
+            <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="dist-section">
+        <div class="dist-label">Review Breakdown</div>
+        <div class="dist-row">
+          <span class="dist-name positive">Positive</span>
+          <div class="dist-track"><div class="dist-fill positive" id="dp" style="width:0%"></div></div>
+          <span class="dist-count">${dist.positive}</span>
+        </div>
+        <div class="dist-row">
+          <span class="dist-name neutral">Neutral</span>
+          <div class="dist-track"><div class="dist-fill neutral" id="dn" style="width:0%"></div></div>
+          <span class="dist-count">${dist.neutral}</span>
+        </div>
+        <div class="dist-row">
+          <span class="dist-name negative">Negative</span>
+          <div class="dist-track"><div class="dist-fill negative" id="dng" style="width:0%"></div></div>
+          <span class="dist-count">${dist.negative}</span>
+        </div>
+      </div>
+    </div>`;
+
+  el.classList.add('visible');
+
+  // Animate bars after a tick
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      document.getElementById('sf').style.width  = pct + '%';
+      document.getElementById('dp').style.width  = posP + '%';
+      document.getElementById('dn').style.width  = neuP + '%';
+      document.getElementById('dng').style.width = negP + '%';
+    }, 80);
+  });
+}
+
+function renderError(msg) {
+  const el = document.getElementById('result');
+  el.innerHTML = `<div class="card error-card">${escHtml(msg)}</div>`;
+  el.classList.add('visible');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ── Boot ────────────────────────────────────────────────── */
+pollStatus();
+</script>
+</body>
+</html>
