@@ -1,10 +1,3 @@
-"""
-NUSMods Sentiment Analysis — Flask Backend
-==========================================
-The DISQUS_API_KEY is read ONLY from the environment.
-It is never forwarded to the frontend.
-"""
-
 import os, json, csv, time, re, threading
 import numpy as np
 import pandas as pd
@@ -14,7 +7,7 @@ from bs4 import BeautifulSoup
 from flask import Flask, jsonify, request, render_template
 from dotenv import load_dotenv
 
-# ── Load .env (only used locally; ignored when env vars are set by the platform) ──
+
 load_dotenv()
 
 app = Flask(__name__)
