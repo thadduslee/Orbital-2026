@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-  /* ── Variables ─────────────────────────────────────── */
+  
   :root {
     --bg:         #07080d;
     --surface:    #0f1118;
@@ -28,7 +28,7 @@
     --sans:       'DM Sans', sans-serif;
   }
 
-  /* ── Reset ──────────────────────────────────────────── */
+  
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
@@ -40,7 +40,7 @@
     overflow-x: hidden;
   }
 
-  /* ── Background grid ─────────────────────────────────── */
+  
   body::before {
     content: '';
     position: fixed;
@@ -54,7 +54,7 @@
     z-index: 0;
   }
 
-  /* ── Layout ──────────────────────────────────────────── */
+  
   .wrap {
     position: relative;
     z-index: 1;
@@ -63,7 +63,7 @@
     padding: 60px 24px 100px;
   }
 
-  /* ── Header ──────────────────────────────────────────── */
+  
   header {
     margin-bottom: 56px;
   }
@@ -105,7 +105,7 @@
     line-height: 1.65;
   }
 
-  /* ── Status bar ──────────────────────────────────────── */
+  
   #status-bar {
     font-family: var(--mono);
     font-size: 12px;
@@ -138,7 +138,7 @@
     50%       { opacity: 0.4; transform: scale(0.8); }
   }
 
-  /* ── Search ──────────────────────────────────────────── */
+  
   .search-row {
     display: flex;
     gap: 12px;
@@ -181,7 +181,7 @@
   }
   .btn-primary:not(:disabled):hover { opacity: 0.88; }
 
-  /* ── Autocomplete list ───────────────────────────────── */
+  
   #autocomplete {
     position: relative;
     margin-top: -32px;
@@ -206,7 +206,7 @@
   }
   .ac-item:hover { background: var(--border); }
 
-  /* ── Result card ─────────────────────────────────────── */
+  
   #result {
     opacity: 0;
     transform: translateY(20px);
@@ -261,7 +261,7 @@
     font-weight: 500;
   }
 
-  /* ── Score section ───────────────────────────────────── */
+  
   .score-section {
     padding: 32px;
     display: flex;
@@ -303,7 +303,7 @@
   .sentiment-badge.neutral  { background: var(--blue-dim);   color: var(--blue); }
   .sentiment-badge.negative { background: var(--red-dim);    color: var(--red); }
 
-  /* ── Score bar ───────────────────────────────────────── */
+  
   .score-bar-wrap { flex: 1; min-width: 180px; }
   .score-bar-label {
     font-family: var(--mono);
@@ -337,7 +337,7 @@
     color: var(--muted);
   }
 
-  /* ── Distribution ────────────────────────────────────── */
+  
   .dist-section {
     padding: 28px 32px;
   }
@@ -389,7 +389,7 @@
     flex-shrink: 0;
   }
 
-  /* ── Not found ───────────────────────────────────────── */
+  
   .not-found {
     padding: 32px;
     font-family: var(--mono);
@@ -418,7 +418,7 @@
   }
   .sug-pill:hover { border-color: var(--orange); color: var(--orange); }
 
-  /* ── Error state ─────────────────────────────────────── */
+  
   .error-card {
     border-color: var(--red);
     color: var(--red);
@@ -428,7 +428,7 @@
     line-height: 1.6;
   }
 
-  /* ── Footer ──────────────────────────────────────────── */
+  
   footer {
     margin-top: 64px;
     padding-top: 24px;
@@ -442,7 +442,7 @@
     gap: 8px;
   }
 
-  /* ── Spinner ─────────────────────────────────────────── */
+  
   .spinner {
     display: inline-block;
     width: 14px; height: 14px;
@@ -502,11 +502,11 @@
 </div>
 
 <script>
-/* ── State ───────────────────────────────────────────────── */
+
 let allModules = [];
 let statusInterval = null;
 
-/* ── Poll /api/status until ready ───────────────────────── */
+
 function pollStatus() {
   statusInterval = setInterval(async () => {
     try {
@@ -557,7 +557,7 @@ function enableSearch() {
   document.getElementById('mod-input').focus();
 }
 
-/* ── Autocomplete ────────────────────────────────────────── */
+
 const input  = document.getElementById('mod-input');
 const acList = document.getElementById('ac-list');
 
@@ -588,7 +588,7 @@ function pick(code) {
   analyze();
 }
 
-/* ── Analysis ────────────────────────────────────────────── */
+
 async function analyze() {
   const code = input.value.toUpperCase().trim();
   if (!code) return;
@@ -614,7 +614,7 @@ async function analyze() {
   }
 }
 
-/* ── Render results ──────────────────────────────────────── */
+
 function renderResult(d, ok) {
   const el = document.getElementById('result');
 
@@ -691,7 +691,7 @@ function renderResult(d, ok) {
 
   el.classList.add('visible');
 
-  // Animate bars after a tick
+  
   requestAnimationFrame(() => {
     setTimeout(() => {
       document.getElementById('sf').style.width  = pct + '%';
@@ -712,7 +712,7 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-/* ── Boot ────────────────────────────────────────────────── */
+
 pollStatus();
 </script>
 </body>

@@ -19,7 +19,6 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# ── Global state (in-memory cache, populated once per server start) ──────────
 _state = {
     "model":        None,   # pretrained Keras model
     "df_reviews":   None,   # pandas DataFrame of all reviews
@@ -31,9 +30,6 @@ _state = {
 _lock = threading.Lock()
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# 1.  Model loading (uses the bundled pretrained model)
-# ═══════════════════════════════════════════════════════════════════════════════
 
 MODEL_PATH = "sentiment_model.keras"
 
@@ -48,9 +44,6 @@ def load_pretrained_model():
     return model
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# 2.  Disqus scraper  (same logic as the notebook, key from env only)
-# ═══════════════════════════════════════════════════════════════════════════════
 
 FORUM_NAME  = "nusmods-prod"
 LIMIT       = 100
@@ -126,7 +119,7 @@ def load_disqus_data():
     _state["progress"] = "Verifying Disqus forum…"
     key = _api_key()
 
-    # Verify forum
+    
     resp = requests.get(
         "https://disqus.com/api/3.0/forums/details.json",
         params={"api_key": key, "forum": FORUM_NAME},
@@ -136,7 +129,7 @@ def load_disqus_data():
     if info.get("code", -1) != 0:
         raise RuntimeError(f"Disqus error {info.get('code')}: check your API key.")
 
-    # Threads
+    
     threads   = fetch_all("forums/listThreads.json", "threads")
     thread_map = {
         t["id"]: {
@@ -146,7 +139,7 @@ def load_disqus_data():
         for t in threads
     }
 
-    # Posts
+    
     raw_posts = fetch_all("forums/listPosts.json", "posts", extra={"include": "approved"})
 
     records = []
@@ -164,10 +157,6 @@ def load_disqus_data():
     df = df[(df["module_code"] != "UNKNOWN") & (df["message"].str.strip() != "")].reset_index(drop=True)
     return df
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# 3.  Background initialisation thread
-# ═══════════════════════════════════════════════════════════════════════════════
 
 def _background_init():
     with _lock:
@@ -195,9 +184,6 @@ def start_init():
     t.start()
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# 4.  Flask routes
-# ═══════════════════════════════════════════════════════════════════════════════
 
 @app.route("/")
 def index():
@@ -301,11 +287,8 @@ def api_reload():
     return jsonify({"message": "Data reload started (model unchanged)."})
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# 5.  Entry point
-# ═══════════════════════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
-    start_init()                        # kick off background init immediately
+    start_init()                        
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
