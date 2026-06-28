@@ -12,7 +12,7 @@ modsense/
 ├── app.py               ← Flask backend (all logic, API key here)
 ├── templates/
 │   └── index.html       ← Frontend (pure HTML/CSS/JS)
-├── sentiment_model.keras ← Pretrained model used for predictions
+├── sentiment_model.keras ← No longer used (kept here to show history)
 ├── requirements.txt
 ├── Procfile             ← For Heroku / Railway / Render
 ├── .env.example         ← Copy → .env and fill in your key
