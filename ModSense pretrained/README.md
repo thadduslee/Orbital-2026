@@ -23,8 +23,8 @@ modsense/
 
 ## Pretrained model
 
-This version does not train a model at startup. It loads **`sentiment_model.keras`**
-from the project root and uses it directly for predictions.
+This version does not train a model at startup. It loads **deberta-lora-module-scorer**
+from huggingface and uses it directly for predictions.
 
 ---
 
