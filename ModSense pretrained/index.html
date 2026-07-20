@@ -310,6 +310,22 @@
     background: var(--border);
   }
 
+  #compare-autocomplete {
+    position: relative;
+    margin-top: -12px;
+    margin-bottom: 20px;
+  }
+
+  #compare-ac-list {
+    background: var(--surface);
+    border: 1px solid var(--border-hi);
+    border-radius: 8px;
+    overflow: hidden;
+    display: none;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
   #result {
     opacity: 0;
     transform: translateY(20px);
@@ -653,6 +669,146 @@
     line-height: 1.6;
   }
 
+  .suggestion-section {
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--orange-dim);
+  }
+
+  .suggestion-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--orange);
+    margin-bottom: 10px;
+  }
+
+  .suggestion-body {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text);
+  }
+
+  .suggestion-body .sug-code {
+    font-family: var(--mono);
+    color: var(--orange);
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 1px dashed var(--orange);
+  }
+
+  .examples-section {
+    padding: 28px 32px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .examples-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+
+  .example-item {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text);
+    padding: 14px 16px;
+    background: var(--surface-hi);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 10px;
+  }
+
+  .example-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .example-item::before {
+    content: '\201C';
+    color: var(--muted);
+    font-family: var(--serif);
+    margin-right: 2px;
+  }
+
+  .mode-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .mode-tab {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 9px 16px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+
+  .mode-tab.active {
+    border-color: var(--orange);
+    color: var(--orange);
+  }
+
+  #compare-panel {
+    display: none;
+  }
+
+  .compare-hint {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--quiet);
+    margin: -28px 0 20px;
+  }
+
+  .compare-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+  }
+
+  .compare-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+
+  .compare-card .module-code {
+    margin-bottom: 4px;
+  }
+
+  .compare-card .module-title {
+    font-size: 1.1rem;
+    margin-bottom: 18px;
+  }
+
+  .compare-score {
+    font-family: var(--serif);
+    font-size: 2.6rem;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .compare-card .score-track {
+    margin-top: 12px;
+  }
+
+  .compare-not-found {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--red);
+  }
+
   footer {
     margin-top: 64px;
     padding-top: 24px;
@@ -737,24 +893,52 @@
     <span id="status-text">Initialising... loading model and fetching reviews.</span>
   </div>
 
-  <div class="search-row">
-    <input
-      id="mod-input"
-      type="text"
-      placeholder="e.g. CS1101S"
-      maxlength="10"
-      autocomplete="off"
-      spellcheck="false"
-      disabled
-    >
-    <button class="btn btn-primary" id="analyze-btn" disabled onclick="analyze()">Analyse</button>
+  <div class="mode-tabs">
+    <button class="mode-tab active" id="tab-single" onclick="setMode('single')">Single Module</button>
+    <button class="mode-tab" id="tab-compare" onclick="setMode('compare')">Compare Modules</button>
   </div>
 
-  <div id="autocomplete">
-    <div id="ac-list"></div>
+  <div id="single-panel">
+    <div class="search-row">
+      <input
+        id="mod-input"
+        type="text"
+        placeholder="e.g. CS1101S"
+        maxlength="10"
+        autocomplete="off"
+        spellcheck="false"
+        disabled
+      >
+      <button class="btn btn-primary" id="analyze-btn" disabled onclick="analyze()">Analyse</button>
+    </div>
+
+    <div id="autocomplete">
+      <div id="ac-list"></div>
+    </div>
+
+    <div id="result"></div>
   </div>
 
-  <div id="result"></div>
+  <div id="compare-panel">
+    <div class="search-row">
+      <input
+        id="compare-input"
+        type="text"
+        placeholder="e.g. CS1101S, MA1521, CS1010A"
+        autocomplete="off"
+        spellcheck="false"
+        disabled
+      >
+      <button class="btn btn-primary" id="compare-btn" disabled onclick="compareModules()">Compare</button>
+    </div>
+    <div class="compare-hint">Separate two or more module codes with commas.</div>
+
+    <div id="compare-autocomplete">
+      <div id="compare-ac-list"></div>
+    </div>
+
+    <div id="compare-result"></div>
+  </div>
 
   <footer>
     <span>ModSense</span>
@@ -817,6 +1001,16 @@ function enableSearch() {
   document.getElementById('mod-input').disabled = false;
   document.getElementById('analyze-btn').disabled = false;
   document.getElementById('mod-input').focus();
+  document.getElementById('compare-input').disabled = false;
+  document.getElementById('compare-btn').disabled = false;
+}
+
+function setMode(mode) {
+  const single = mode === 'single';
+  document.getElementById('single-panel').style.display = single ? 'block' : 'none';
+  document.getElementById('compare-panel').style.display = single ? 'none' : 'block';
+  document.getElementById('tab-single').classList.toggle('active', single);
+  document.getElementById('tab-compare').classList.toggle('active', !single);
 }
 
 const input = document.getElementById('mod-input');
@@ -975,6 +1169,9 @@ function renderResult(d, ok) {
         </div>
       </div>
 
+      ${renderSuggestion(d.suggestion)}
+      ${renderExamples(d.examples)}
+
       ${timeline}
     </div>`;
 
@@ -989,6 +1186,34 @@ function renderResult(d, ok) {
       animateTimeline();
     }, 80);
   });
+}
+
+function renderSuggestion(suggestion) {
+  if (!suggestion) return '';
+
+  const isPositive = suggestion.reason === 'positive';
+  const verdict = isPositive
+    ? `has a positive sentiment score of <strong>${Number(suggestion.score).toFixed(2)}/5</strong>`
+    : `has the highest sentiment score of <strong>${Number(suggestion.score).toFixed(2)}/5</strong> among similar modules`;
+
+  return `<div class="suggestion-section">
+    <div class="suggestion-label">Suggested Alternative</div>
+    <div class="suggestion-body">
+      Consider <span class="sug-code" onclick="pick('${escHtml(suggestion.module_code)}')">${escHtml(suggestion.module_code)}</span> instead —
+      it ${verdict} based on ${suggestion.review_count} review${suggestion.review_count === 1 ? '' : 's'}, from the same faculty and level.
+    </div>
+  </div>`;
+}
+
+function renderExamples(examples) {
+  if (!examples || !examples.length) return '';
+
+  const items = examples.map(ex => `<div class="example-item">${escHtml(ex)}</div>`).join('');
+
+  return `<div class="examples-section">
+    <div class="examples-label">Example Comments</div>
+    ${items}
+  </div>`;
 }
 
 function renderHeader(d) {
@@ -1119,6 +1344,138 @@ function escHtml(s) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+const compareInput = document.getElementById('compare-input');
+const compareAcList = document.getElementById('compare-ac-list');
+
+compareInput.addEventListener('input', () => {
+  const raw = compareInput.value;
+  const parts = raw.split(',');
+  const current = parts[parts.length - 1].toUpperCase().trim();
+  const already = parts.slice(0, -1).map(p => p.toUpperCase().trim());
+
+  if (!current || allModules.length === 0) {
+    compareAcList.style.display = 'none';
+    return;
+  }
+
+  const hits = allModules
+    .filter(m => m.startsWith(current) && !already.includes(m))
+    .slice(0, 8);
+
+  if (!hits.length) {
+    compareAcList.style.display = 'none';
+    return;
+  }
+
+  compareAcList.innerHTML = hits.map(m =>
+    `<div class="ac-item" onclick="pickCompare('${m}')">${m}</div>`
+  ).join('');
+  compareAcList.style.display = 'block';
+});
+
+compareInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    compareAcList.style.display = 'none';
+    compareModules();
+  }
+  if (e.key === 'Escape') compareAcList.style.display = 'none';
+});
+
+document.addEventListener('click', e => {
+  if (!document.getElementById('compare-autocomplete').contains(e.target) && e.target !== compareInput) {
+    compareAcList.style.display = 'none';
+  }
+});
+
+function pickCompare(code) {
+  const parts = compareInput.value.split(',');
+  parts[parts.length - 1] = ' ' + code;
+  compareInput.value = parts.map(p => p.trim()).join(', ') + ', ';
+  compareAcList.style.display = 'none';
+  compareInput.focus();
+}
+
+async function compareModules() {
+  const raw = compareInput.value.trim();
+  if (!raw) return;
+
+  const codes = raw.split(',').map(c => c.trim()).filter(Boolean);
+  if (codes.length < 2) {
+    renderCompareError('Enter at least two module codes, separated by commas.');
+    return;
+  }
+
+  const btn = document.getElementById('compare-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+
+  const resultEl = document.getElementById('compare-result');
+  resultEl.classList.remove('visible');
+  resultEl.innerHTML = '';
+
+  try {
+    const r = await fetch(`/api/compare?modules=${encodeURIComponent(codes.join(','))}`);
+    const d = await r.json();
+
+    if (!r.ok || d.error) {
+      renderCompareError(d.error || 'Something went wrong.');
+      return;
+    }
+
+    renderCompare(d.modules || []);
+  } catch (e) {
+    renderCompareError('Network error: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Compare';
+  }
+}
+
+function renderCompare(modules) {
+  const el = document.getElementById('compare-result');
+
+  const cards = modules.map(m => {
+    if (!m.found) {
+      return `<div class="compare-card">
+        <div class="module-code">${escHtml(m.module_code)}</div>
+        <div class="compare-not-found">No reviews found for this module.</div>
+      </div>`;
+    }
+
+    if (!m.reliable) {
+      return `<div class="compare-card">
+        <div class="module-code">${escHtml(m.module_code)}</div>
+        <div class="module-title">${escHtml(m.module_title)}</div>
+        <div class="compare-not-found">Only ${m.review_count} review${m.review_count === 1 ? '' : 's'} found — not enough to score reliably.</div>
+      </div>`;
+    }
+
+    const pct = (m.score / 5) * 100;
+
+    return `<div class="compare-card">
+      <div class="module-code">${escHtml(m.module_code)}</div>
+      <div class="module-title">${escHtml(m.module_title)}</div>
+      <div class="compare-score" style="color: var(--${sentimentColor(m.sentiment)})">${Number(m.score).toFixed(2)}</div>
+      <span class="sentiment-badge ${m.sentiment}">${m.sentiment}</span>
+      <div class="score-track">
+        <div class="score-fill ${m.sentiment}" style="width:${pct}%"></div>
+      </div>
+      <div class="review-count" style="text-align:left; margin-top: 10px;">
+        <span>${m.review_count}</span>reviews analysed
+      </div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `<div class="compare-grid">${cards}</div>`;
+  el.classList.add('visible');
+}
+
+function renderCompareError(msg) {
+  const el = document.getElementById('compare-result');
+  el.innerHTML = `<div class="card error-card">${escHtml(msg)}</div>`;
+  el.classList.add('visible');
 }
 
 pollStatus();
