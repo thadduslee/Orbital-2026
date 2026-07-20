@@ -9,8 +9,8 @@ import requests
 import torch
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
-from flask import Flask, jsonify, render_template
-from peft import PeftModel
+from flask import Flask, jsonify, render_template, request
+from peft import PeftConfig, PeftModel
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 load_dotenv()
@@ -29,10 +29,10 @@ _state = {
 _lock = threading.Lock()
 
 # Model config
-BASE_MODEL_ID = "microsoft/deberta-v3-base"
 ADAPTER_REPO = os.environ.get("HF_ADAPTER_REPO", "")
-NUM_LABELS = 5
 MIN_SAMPLES = 5
+MIN_EXAMPLE_TOKENS = 100  # only surface example comments with at least this many tokens
+PREDICT_BATCH_SIZE = 16
 
 # Disqus config
 FORUM_NAME = "nusmods-prod"
@@ -45,15 +45,21 @@ def load_hf_model():
         raise RuntimeError(
             "HF_ADAPTER_REPO environment variable is not set. "
             "Set it to your HuggingFace adapter repo, e.g. "
-            "'your-username/deberta-lora-module-scorer'."
+            "'thaddus/deberta-lora-module-scorer'."
         )
 
-    _state["progress"] = f"Loading base model '{BASE_MODEL_ID}' from HuggingFace..."
-    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_ID, use_fast=False)
+    _state["progress"] = f"Reading adapter config from '{ADAPTER_REPO}'..."
+    peft_config = PeftConfig.from_pretrained(ADAPTER_REPO)
+    base_model_name = peft_config.base_model_name_or_path
 
+    _state["progress"] = f"Loading base model '{base_model_name}' from HuggingFace..."
+    tokenizer = AutoTokenizer.from_pretrained(base_model_name)
+
+    # Regression head: a single output score, not a 5-way classification.
     base_model = AutoModelForSequenceClassification.from_pretrained(
-        BASE_MODEL_ID,
-        num_labels=NUM_LABELS,
+        base_model_name,
+        num_labels=1,
+        ignore_mismatched_sizes=True,
     )
 
     _state["progress"] = f"Applying LoRA adapters from '{ADAPTER_REPO}'..."
@@ -193,25 +199,98 @@ def load_disqus_data():
     return df
 
 
-def predict_scores(tokenizer, model, messages: list[str]) -> list[float]:
-    scores = []
-    if len(messages) == 0:
-        return scores
+def predict_scores(
+    tokenizer, model, messages: list[str], batch_size: int = PREDICT_BATCH_SIZE
+) -> list[float]:
+    if not messages:
+        return []
 
+    scores = []
     with torch.no_grad():
-        for msg in messages:
+        for i in range(0, len(messages), batch_size):
+            batch = messages[i : i + batch_size]
             inputs = tokenizer(
-                msg,
+                batch,
                 return_tensors="pt",
                 truncation=True,
                 max_length=512,
+                padding=True,
             )
-            logits = model(**inputs).logits
-            probs = torch.softmax(logits, dim=-1).squeeze()
-            score = float((probs * torch.arange(NUM_LABELS, dtype=torch.float)).sum()) + 1.0
-            scores.append(score)
+            logits = model(**inputs).logits.squeeze(-1)
+            if logits.dim() == 0:
+                logits = logits.unsqueeze(0)
+            scores.extend(logits.detach().cpu().tolist())
 
     return scores
+
+
+def get_example_reviews(
+    tokenizer,
+    messages: list[str],
+    scores: list[float],
+    min_score: float | None = None,
+    max_score: float | None = None,
+    num_examples: int = 3,
+    min_tokens: int = MIN_EXAMPLE_TOKENS,
+) -> list[str]:
+    """Surface a handful of representative comments for a given sentiment band."""
+    candidates = []
+    for msg, score in zip(messages, scores):
+        if min_score is not None and score < min_score:
+            continue
+        if max_score is not None and score > max_score:
+            continue
+        token_length = len(tokenizer.encode(msg, add_special_tokens=False))
+        if token_length < min_tokens:
+            continue
+        candidates.append(msg)
+
+    return candidates[:num_examples]
+
+
+def find_module_suggestion(tokenizer, model, df: pd.DataFrame, module_code: str, average: float):
+    """
+    If a module's sentiment isn't positive, look for a better-scoring alternative
+    from the same faculty and level (i.e. same module-code prefix).
+    """
+    if average > 3.5:
+        return None
+
+    prefix = module_code[:3]
+    candidates = [
+        m for m in df["module_code"].unique() if m.startswith(prefix) and m != module_code
+    ]
+
+    best_code, best_score, best_count = None, average, 0
+
+    for cand in candidates:
+        cand_messages = df[df["module_code"] == cand]["message"].dropna().tolist()
+        if len(cand_messages) < MIN_SAMPLES:
+            continue
+
+        cand_scores = predict_scores(tokenizer, model, cand_messages)
+        cand_average = round(sum(cand_scores) / len(cand_scores), 2)
+
+        if cand_average > 3.5:
+            return {
+                "module_code": cand,
+                "score": cand_average,
+                "review_count": len(cand_scores),
+                "reason": "positive",
+            }
+
+        if cand_average > best_score:
+            best_code, best_score, best_count = cand, cand_average, len(cand_scores)
+
+    if best_code:
+        return {
+            "module_code": best_code,
+            "score": round(best_score, 2),
+            "review_count": best_count,
+            "reason": "best_available",
+        }
+
+    return None
 
 
 def sentiment_from_average(average: float) -> str:
@@ -386,6 +465,20 @@ def api_analyze(module_code: str):
         sentiment = sentiment_from_average(average) if reliable else "insufficient"
         semester_sentiment = build_semester_sentiment(subset, scores)
 
+        examples = []
+        suggestion = None
+        if reliable:
+            if sentiment == "positive":
+                examples = get_example_reviews(tokenizer, messages, scores, min_score=3.5)
+            elif sentiment == "negative":
+                examples = get_example_reviews(tokenizer, messages, scores, max_score=2.5)
+            else:
+                examples = get_example_reviews(
+                    tokenizer, messages, scores, min_score=2.5, max_score=3.5
+                )
+
+            suggestion = find_module_suggestion(tokenizer, model, df, module_code, average)
+
         response = {
             "found": True,
             "module_code": module_code,
@@ -403,12 +496,67 @@ def api_analyze(module_code: str):
                 "negative": sum(1 for s in scores if s < 2.5),
             },
             "semester_sentiment": semester_sentiment,
+            "examples": examples,
+            "suggestion": suggestion,
         }
 
         return jsonify(response)
 
     except Exception as e:
         return jsonify({"error": f"Internal Server Error: {str(e)}"}), 500
+
+
+@app.route("/api/compare")
+def api_compare():
+    """
+    Side-by-side comparison of two or more modules.
+    Usage: /api/compare?modules=CS1010A,MA1521
+    """
+    codes_param = request.args.get("modules", "")
+    codes = [c.upper().strip() for c in codes_param.split(",") if c.strip()]
+
+    if len(codes) < 2:
+        return jsonify(
+            {"error": "Provide at least two module codes via ?modules=CODE1,CODE2"}
+        ), 400
+
+    with _lock:
+        if not _state["ready"]:
+            return jsonify({"error": "Data not ready yet."}), 503
+        model = _state["model"]
+        tokenizer = _state["tokenizer"]
+        df = _state["df_reviews"]
+
+    results = []
+    for code in codes:
+        subset = df[df["module_code"] == code].copy().reset_index(drop=True)
+        if subset.empty:
+            results.append({"module_code": code, "found": False})
+            continue
+
+        messages = subset["message"].tolist()
+        review_count = len(messages)
+        scores = predict_scores(tokenizer, model, messages)
+
+        average = round(sum(scores) / review_count, 2) if review_count else 0.0
+        reliable = review_count >= MIN_SAMPLES
+        sentiment = sentiment_from_average(average) if reliable else "insufficient"
+        semester_sentiment = build_semester_sentiment(subset, scores)
+
+        results.append(
+            {
+                "module_code": code,
+                "found": True,
+                "module_title": subset["module_title"].iloc[0],
+                "review_count": review_count,
+                "reliable": reliable,
+                "score": average if reliable else 0.0,
+                "sentiment": sentiment,
+                "semester_sentiment": semester_sentiment,
+            }
+        )
+
+    return jsonify({"modules": results})
 
 
 def _background_reload_data():
