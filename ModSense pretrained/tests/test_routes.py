@@ -64,8 +64,7 @@ def test_analyze_unknown_module_returns_404_with_suggestions(client, ready_state
 
 @patch("app.predict_scores")
 def test_analyze_reliable_module_returns_full_result(mock_predict, client, ready_state):
-    # side_effect keys the returned scores to len(messages) so this stays correct
-    # even if find_module_suggestion triggers additional internal calls.
+    # side_effect keeps this correct even tho find_module suggestion adds internal calls
     mock_predict.side_effect = lambda tokenizer, model, messages: [4.0] * len(messages)
     r = client.get("/api/analyze/CS2103T")
     body = r.get_json()
@@ -82,7 +81,7 @@ def test_analyze_below_min_samples_flagged_insufficient(mock_predict, client, re
     body = r.get_json()
     assert body["reliable"] is False
     assert body["sentiment"] == "insufficient"
-    assert body["score"] == 0.0  # score suppressed when unreliable
+    assert body["score"] == 0.0  # if unreliablet hen suppress
 
 
 def test_compare_requires_at_least_two_codes(client, ready_state):
@@ -92,9 +91,7 @@ def test_compare_requires_at_least_two_codes(client, ready_state):
 
 @patch("app.predict_scores")
 def test_compare_returns_one_entry_per_module(mock_predict, client, ready_state):
-    # Each module has a different review count (6 vs 2), so the mock must
-    # return a list matching the length of whatever messages it's called with,
-    # rather than a fixed-length list.
+    # mock return list matching len of moduel review
     mock_predict.side_effect = lambda tokenizer, model, messages: [4.0] * len(messages)
     r = client.get("/api/compare?modules=CS2103T,CS2100")
     body = r.get_json()

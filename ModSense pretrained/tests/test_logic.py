@@ -28,8 +28,8 @@ def test_module_code_from_title_rejects_invalid_prefix():
 def test_sentiment_from_average_boundaries():
     assert sentiment_from_average(4.0) == "positive"
     assert sentiment_from_average(2.0) == "negative"
-    assert sentiment_from_average(3.5) == "neutral"   # boundary: not > 3.5
-    assert sentiment_from_average(2.5) == "neutral"   # boundary: not < 2.5
+    assert sentiment_from_average(3.5) == "neutral"   # boundary not > 3.5
+    assert sentiment_from_average(2.5) == "neutral"   # boundary  not < 2.5
     assert sentiment_from_average(3.0) == "neutral"
 
 def test_get_academic_period_sem1_and_sem2_and_special_term():
@@ -49,5 +49,5 @@ def test_build_semester_sentiment_flags_low_sample_periods_unreliable():
         "module_code": ["CS2103T", "CS2103T"],
     })
     result = build_semester_sentiment(df, scores=[4.0, 4.5])
-    assert result[0]["reliable"] is False  # only 2 reviews, MIN_SAMPLES = 5
+    assert result[0]["reliable"] is False  # only 2 reviews when MIN_SAMPLES = 5
     assert result[0]["period"] == "AY2024/2025 Sem 1"
